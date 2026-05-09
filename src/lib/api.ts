@@ -1,4 +1,4 @@
-const API_BASE = "https://dreams-machine-7e6a3c0a6e6e.herokuapp.com";
+const API_BASE = "https://server.pixmachineapp.com.br/rota-recebimento-mercado-pago-dinamica/e31038da-493a-4682-a968-9198faddff82";
 
 export type LoginTipo = "cliente" | "pessoa";
 
