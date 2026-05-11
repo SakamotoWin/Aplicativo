@@ -1,6 +1,5 @@
-// A URL enviada pelo usuário parece ser um endpoint específico, mas o app espera uma base.
-// Vamos tentar usar a base do servidor enviado.
-const API_BASE = "https://server.pixmachineapp.com.br";
+// Revertendo para a base original que estava no guia de debug, pois o novo servidor está retornando 401.
+const API_BASE = "https://dreams-machine-7e6a3c0a6e6e.herokuapp.com";
 
 export type LoginTipo = "cliente" | "pessoa";
 

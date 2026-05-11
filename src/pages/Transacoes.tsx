@@ -58,8 +58,12 @@ const fmt = (v: number) => {
   return `R$ ${v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 };
 
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+
 export default function Transacoes() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
@@ -130,6 +134,18 @@ export default function Transacoes() {
   if (loading) return <LoadingSpinner text="Carregando transações..." />;
 
   const filtered = transacoes.filter((t) => {
+    // Search filter
+    const searchLower = search.toLowerCase();
+    const matchesSearch = !search || 
+      t.maquinaNome?.toLowerCase().includes(searchLower) || 
+      (t as any).estabelecimentoNome?.toLowerCase().includes(searchLower) ||
+      t.tipo?.toLowerCase().includes(searchLower) ||
+      t.tipoPagamento?.toLowerCase().includes(searchLower) ||
+      String(t.valor).includes(searchLower);
+
+    if (!matchesSearch) return false;
+
+    // Date filter
     const dateStr = t.data || t.dataHora;
     if (!dateStr) return true;
     const d = new Date(dateStr);
@@ -145,6 +161,7 @@ export default function Transacoes() {
   const clearFilters = () => {
     setDateFrom(undefined);
     setDateTo(undefined);
+    setSearch("");
   };
 
   const getTypeLabel = (t: Transacao) => {
@@ -183,6 +200,17 @@ export default function Transacoes() {
           {error}
         </div>
       )}
+
+      {/* Search Filter */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar transação, máquina ou valor..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 bg-card/60 border-primary/10"
+        />
+      </div>
 
       {/* Date filter */}
       <Card className="border-primary/10 bg-card/60 p-3">

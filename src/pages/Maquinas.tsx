@@ -18,6 +18,7 @@ interface Maquina {
   ultimaRequisicao?: string | null;
   maquininha_serial?: string;
   store_id?: string;
+  estabelecimentoNome?: string;
 }
 
 interface ClienteResponse {
@@ -40,7 +41,9 @@ export default function Maquinas() {
     try {
       if (isAdmin()) {
         const clientes = await apiFetch<ClienteResponse[]>("/clientes");
-        setMaquinas(clientes.flatMap((c) => c.Maquina || []));
+        setMaquinas(clientes.flatMap((c) => 
+          (c.Maquina || []).map(m => ({ ...m, estabelecimentoNome: c.nome }))
+        ));
       } else {
         const list = await apiFetch<Maquina[]>("/maquinas");
         setMaquinas(Array.isArray(list) ? list : []);
@@ -147,7 +150,7 @@ export default function Maquinas() {
                   {/* Content */}
                   <div className="flex-1 min-w-0">
                     <h3 className="font-display text-sm font-bold tracking-wide text-foreground truncate">
-                      {m.nome || `Máquina ${i + 1}`}
+                      {m.estabelecimentoNome || m.nome || `Máquina ${i + 1}`}
                     </h3>
 
                     {(m.descricao || m.localizacao) && (

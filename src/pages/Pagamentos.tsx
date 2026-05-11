@@ -50,8 +50,12 @@ const fmt = (v: number) => {
   return `R$ ${v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 };
 
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+
 export default function Pagamentos() {
   const [resumos, setResumos] = useState<MaquinaResumo[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -114,11 +118,16 @@ export default function Pagamentos() {
 
   if (loading) return <LoadingSpinner text="Carregando pagamentos..." />;
 
-  const grandTotal = resumos.reduce((acc, r) => acc + r.total, 0);
-  const grandPix = resumos.reduce((acc, r) => acc + r.pix, 0);
-  const grandEspecie = resumos.reduce((acc, r) => acc + r.especie, 0);
-  const grandDebito = resumos.reduce((acc, r) => acc + r.debito, 0);
-  const grandCredito = resumos.reduce((acc, r) => acc + r.creditoRemoto, 0);
+  const filtered = resumos.filter(r => 
+    r.nome.toLowerCase().includes(search.toLowerCase()) || 
+    r.estabelecimentoNome?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const grandTotal = filtered.reduce((acc, r) => acc + r.total, 0);
+  const grandPix = filtered.reduce((acc, r) => acc + r.pix, 0);
+  const grandEspecie = filtered.reduce((acc, r) => acc + r.especie, 0);
+  const grandDebito = filtered.reduce((acc, r) => acc + r.debito, 0);
+  const grandCredito = filtered.reduce((acc, r) => acc + r.creditoRemoto, 0);
 
   return (
     <div className="animate-fade-in space-y-4">
@@ -135,6 +144,17 @@ export default function Pagamentos() {
           {error}
         </div>
       )}
+
+      {/* Search Filter */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por estabelecimento ou máquina..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 bg-card/60 border-primary/10"
+        />
+      </div>
 
       {/* Grand total card */}
       <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-primary/5 p-4 shadow-gold">
@@ -156,12 +176,12 @@ export default function Pagamentos() {
       </Card>
 
       {/* Per machine breakdown */}
-      {resumos.length > 0 && (
+      {filtered.length > 0 && (
         <div className="space-y-2">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-1">
             Por Máquina
           </h2>
-          {resumos.map((r) => (
+          {filtered.map((r) => (
             <Card key={r.id} className="border-border/40 bg-card/60 p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
@@ -169,9 +189,11 @@ export default function Pagamentos() {
                     <Cpu className="h-4 w-4 text-primary" />
                   </div>
                   <div className="flex flex-col">
-                    <p className="text-sm font-semibold text-foreground">{r.nome}</p>
-                    {r.estabelecimentoNome && (
-                      <p className="text-[10px] text-muted-foreground/60">{r.estabelecimentoNome}</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {r.estabelecimentoNome || r.nome}
+                    </p>
+                    {r.estabelecimentoNome && r.nome !== r.estabelecimentoNome && (
+                      <p className="text-[10px] text-muted-foreground/60">{r.nome}</p>
                     )}
                   </div>
                 </div>
