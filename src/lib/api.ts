@@ -1,5 +1,5 @@
-// Revertendo para a base original que estava no guia de debug, pois o novo servidor está retornando 401.
-const API_BASE = "https://dreams-machine-7e6a3c0a6e6e.herokuapp.com";
+// Tentando o servidor novo novamente, pois o Heroku deu Failed to Fetch.
+const API_BASE = "https://server.pixmachineapp.com.br";
 
 export type LoginTipo = "cliente" | "pessoa";
 
