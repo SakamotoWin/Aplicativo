@@ -1,4 +1,6 @@
-const API_BASE = "https://server.pixmachineapp.com.br/rota-recebimento-mercado-pago-dinamica/e31038da-493a-4682-a968-9198faddff82";
+// A URL enviada pelo usuário parece ser um endpoint específico, mas o app espera uma base.
+// Vamos tentar usar a base do servidor enviado.
+const API_BASE = "https://server.pixmachineapp.com.br";
 
 export type LoginTipo = "cliente" | "pessoa";
 
@@ -72,10 +74,14 @@ async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginP
   console.log("[AUTH] POST", url);
   console.log("[AUTH] Body:", { email: payload.email, senha: "***" });
 
+  console.log("[AUTH] Tentando login em:", url);
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
+  }).catch(err => {
+    console.error("[AUTH] Erro de rede:", err);
+    throw new Error("Não foi possível conectar ao servidor. Verifique sua internet ou a URL da API.");
   });
 
   const data = (await parseResponse(res)) as LoginResponse;

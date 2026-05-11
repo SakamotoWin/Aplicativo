@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2, Mail, Lock, Eye, EyeOff, Instagram } from "lucide-react";
+import { LogoLeao } from "@/components/LogoLeao";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -44,7 +45,7 @@ export default function Login() {
 
       <nav className="fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-5 md:px-10 py-4 bg-gradient-to-b from-black/95 to-transparent backdrop-blur-[4px]">
         <div className="flex items-center gap-3">
-          <img src="/logo.png" alt="PIX Machine" className="w-10 h-10 object-contain drop-shadow-[0_0_6px_rgba(245,166,35,0.5)]" />
+          <LogoLeao size={40} />
           <span className="hidden md:block font-['Orbitron'] text-lg font-bold text-[#f5a623] tracking-[2px] uppercase">PIX Machine</span>
         </div>
         <div className="flex items-center gap-5">
@@ -66,7 +67,7 @@ export default function Login() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-[55%] w-[600px] h-[600px] bg-[radial-gradient(circle,rgba(245,166,35,0.11)_0%,transparent_70%)] pointer-events-none"></div>
         
         <div className="relative mb-6 animate-fade-in-down">
-          <img src="/logo.png" alt="PIX Machine Logo" className="w-24 h-24 object-contain drop-shadow-[0_0_30px_rgba(245,166,35,0.7)] animate-pulse" />
+          <div className="animate-pulse drop-shadow-[0_0_30px_rgba(245,166,35,0.7)]"><LogoLeao size={100} /></div>
         </div>
         
         <h1 className="font-['Orbitron'] text-3xl md:text-5xl font-black text-[#f5a623] tracking-[6px] uppercase mb-8 drop-shadow-[0_0_40px_rgba(245,166,35,0.35)] animate-fade-in-down">
