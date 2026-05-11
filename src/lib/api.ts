@@ -1,5 +1,5 @@
 // Tentando o servidor novo novamente, pois o Heroku deu Failed to Fetch.
-const API_BASE = "https://server.pixmachineapp.com.br";
+const API_BASE = "https://server.pixmachineapp.com.br/api";
 
 export type LoginTipo = "cliente" | "pessoa";
 

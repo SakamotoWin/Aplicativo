@@ -33,8 +33,12 @@ interface ClienteItem {
   Maquina: MaquinaItem[];
 }
 
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
+
 export default function Premios() {
   const [premios, setPremios] = useState<PremioItem[]>([]);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -103,6 +107,12 @@ export default function Premios() {
 
   if (loading) return <LoadingSpinner text="Carregando prêmios..." />;
 
+  const filtered = premios.filter(p => 
+    p.maquinaNome?.toLowerCase().includes(search.toLowerCase()) || 
+    p.estabelecimentoNome?.toLowerCase().includes(search.toLowerCase()) ||
+    p.observacao?.toLowerCase().includes(search.toLowerCase())
+  );
+
   const formatDate = (p: PremioItem) => {
     const d = p.data || p.dataHora;
     return d ? new Date(d).toLocaleString("pt-BR") : "—";
@@ -124,14 +134,25 @@ export default function Premios() {
         </div>
       )}
 
-      {premios.length === 0 ? (
+      {/* Search Filter */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Buscar por estabelecimento, máquina ou observação..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 bg-card/60 border-primary/10"
+        />
+      </div>
+
+      {filtered.length === 0 ? (
         <Card className="border-border bg-card/60 p-8 text-center">
           <Gift className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
           <p className="text-sm text-muted-foreground">Nenhum prêmio entregue encontrado</p>
         </Card>
       ) : (
         <div className="flex flex-col gap-2">
-          {premios.map((p, i) => (
+          {filtered.map((p, i) => (
             <Card key={p.id || i} className="border-border/40 bg-card/60 p-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
@@ -146,7 +167,8 @@ export default function Premios() {
                   <p className="text-xs text-muted-foreground">{formatDate(p)}</p>
                   {(p.maquinaNome || p.estabelecimentoNome) && (
                     <p className="text-[10px] text-muted-foreground/60 mt-0.5">
-                      {p.estabelecimentoNome && `${p.estabelecimentoNome} - `}{p.maquinaNome}
+                      {p.estabelecimentoNome || p.maquinaNome}
+                      {p.estabelecimentoNome && p.maquinaNome && p.maquinaNome !== p.estabelecimentoNome && ` - ${p.maquinaNome}`}
                     </p>
                   )}
                   {p.observacao && (
