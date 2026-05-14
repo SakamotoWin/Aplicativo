@@ -51,12 +51,16 @@ export default function Dashboard() {
       let statsData: EstatisticasData;
       if (userType === "ADMIN") {
         statsData = await apiFetchFirst<EstatisticasData>([
+          "/dashboard",
+          "/dashboard-adm",
           "/estatisticas-gerais",
-          "/estatisticas-gerais-adm",
           `/estatisticas-gerais/${userId}`
         ]);
       } else {
-        statsData = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}`);
+        statsData = await apiFetchFirst<EstatisticasData>([
+          `/dashboard/${userId}`,
+          `/estatisticas-gerais/${userId}`
+        ]);
       }
       console.log("[Dashboard] Estatísticas:", statsData);
       
