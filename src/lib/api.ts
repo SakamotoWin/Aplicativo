@@ -139,6 +139,7 @@ export async function apiFetch<T = unknown>(
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     "x-access-token": token,
+    "Authorization": `Bearer ${token}`,
     ...options.headers,
   };
 
@@ -172,14 +173,14 @@ export async function apiFetch<T = unknown>(
     if (res.status === 401) {
       console.error("[401 ERROR] Token inválido!", {
         token: token ? `${token.slice(0, 24)}...` : "NULO",
-        tokenLength: token ? token.length : 0,
-        tokenFormat: token && token.startsWith("eyJ") ? "JWT" : "UNKNOWN",
-        userType: getUserType(),
-        userId: getUserId(),
         url,
         errorMessage,
       });
-      throw new Error(errorMessage || "401 Unauthorized: token inválido, expirado ou sem permissão.");
+      // Limpa o token para forçar re-login se for erro de autenticação real
+      if (errorMessage?.toLowerCase().includes("token") || errorMessage?.toLowerCase().includes("expirado")) {
+        clearToken();
+      }
+      throw new Error(errorMessage || "Sessão expirada ou sem permissão. Por favor, faça login novamente.");
     }
 
     throw new Error(errorMessage || `Erro ${res.status} em ${path}`);
