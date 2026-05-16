@@ -62,8 +62,8 @@ export default function Premios() {
         machines.map(async (m) => {
           try {
             const path = isAdmin()
-              ? `/api/premios-entregues-adm/${m.id}`
-              : `/api/premios-entregues/${m.id}`;
+              ? `/premios-entregues-adm/${m.id}`
+              : `/premios-entregues/${m.id}`;
             const data = await apiFetch<PremiosResponse | PremioItem[]>(path);
             // Backend may return { premios: [...] } or an array directly
             let list: PremioItem[] = [];
