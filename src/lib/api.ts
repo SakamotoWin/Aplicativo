@@ -1,5 +1,5 @@
 // Tentando o servidor novo novamente, pois o Heroku deu Failed to Fetch.
-const API_BASE = "https://server.pixmachineapp.com.br";
+const API_BASE = "https://server.pixmachineapp.com.br/api";
 
 export type LoginTipo = "cliente" | "pessoa";
 
@@ -94,6 +94,10 @@ async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginP
   if (!data?.token || typeof data.token !== "string") {
     throw new Error("Token JWT inválido ou ausente na resposta do login.");
   }
+
+  // Salvar informações importantes do retorno do novo servidor
+  if (data.id) localStorage.setItem("userId", String(data.id));
+  if (data.key) localStorage.setItem("userType", String(data.key));
 
   return data;
 }
