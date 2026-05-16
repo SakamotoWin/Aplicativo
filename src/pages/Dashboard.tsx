@@ -49,19 +49,16 @@ export default function Dashboard() {
 
       // Se for ADMIN, tentamos várias rotas possíveis para evitar 404
       let statsData: EstatisticasData;
+      // Baseado no arquivo dashboardRoutes.ts, a rota para estatísticas de um cliente específico é /dashboard/estatisticas-gerais/:id
+      // Como o ADMIN quer ver as estatísticas de um cliente ou gerais, vamos tentar as rotas que o servidor expõe.
       if (userType === "ADMIN") {
         statsData = await apiFetchFirst<EstatisticasData>([
-          "/dashboard/estatisticas-gerais",
+          `/dashboard/estatisticas-gerais/${userId}`,
           "/dashboard/estatisticas-gerais-adm",
-          "/dashboard",
-          "/estatisticas-gerais"
+          "/dashboard/estatisticas-gerais"
         ]);
       } else {
-        statsData = await apiFetchFirst<EstatisticasData>([
-          `/dashboard/estatisticas-gerais/${userId}`,
-          `/dashboard/${userId}`,
-          `/estatisticas-gerais/${userId}`
-        ]);
+        statsData = await apiFetch<EstatisticasData>(`/dashboard/estatisticas-gerais/${userId}`);
       }
       console.log("[Dashboard] Estatísticas:", statsData);
       
@@ -84,31 +81,32 @@ export default function Dashboard() {
 
   if (loading) return <LoadingSpinner text="Carregando dashboard..." />;
 
+  // O servidor retorna { totalVendas, formasPagamento: { pix, especie, debito, credito, creditoRemoto } }
   const stats = [
     {
-      label: "Total",
-      value: fmt(toNum(data?.total)),
+      label: "Total Vendas",
+      value: fmt(toNum(data?.totalVendas || data?.total)),
       icon: TrendingUp,
       color: "text-primary",
       bgColor: "bg-primary/10",
     },
     {
       label: "PIX",
-      value: fmt(toNum(data?.pix)),
+      value: fmt(toNum((data?.formasPagamento as any)?.pix || data?.pix)),
       icon: Cpu,
       color: "text-blue-400",
       bgColor: "bg-blue-400/10",
     },
     {
       label: "Espécie",
-      value: fmt(toNum(data?.especie)),
+      value: fmt(toNum((data?.formasPagamento as any)?.especie || data?.especie)),
       icon: Zap,
       color: "text-green-400",
       bgColor: "bg-green-400/10",
     },
     {
       label: "Débito",
-      value: fmt(toNum(data?.debito)),
+      value: fmt(toNum((data?.formasPagamento as any)?.debito || data?.debito)),
       icon: BarChart3,
       color: "text-yellow-400",
       bgColor: "bg-yellow-400/10",
