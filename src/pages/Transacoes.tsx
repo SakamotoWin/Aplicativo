@@ -81,7 +81,8 @@ export default function Transacoes() {
           (c.Maquina || []).map(m => ({ ...m, estabelecimentoNome: c.nome }))
         ) : [];
       } else {
-        const list = await apiFetch<MaquinaItem[]>("/maquinas");
+        // O servidor usa /maquina no singular
+        const list = await apiFetch<MaquinaItem[]>("/maquina");
         machines = Array.isArray(list) ? list : [];
       }
 
@@ -90,7 +91,7 @@ export default function Transacoes() {
       await Promise.allSettled(
         machines.map(async (m) => {
           try {
-            const path = isAdmin() ? `/pagamentos-adm/${m.id}` : `/pagamentos/${m.id}`;
+            const path = isAdmin() ? `/pagamentos-adm/${m.id}` : `/pagamento/${m.id}`;
             const data = await apiFetch<PagamentosResponse>(path);
             // Admin returns { pagamentos: [...] }, client returns { dadosUnificados: [...] }
             const list = (data.pagamentos ?? data.dadosUnificados ?? []) as Transacao[];

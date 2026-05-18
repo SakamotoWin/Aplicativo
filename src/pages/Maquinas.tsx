@@ -45,7 +45,8 @@ export default function Maquinas() {
           (c.Maquina || []).map(m => ({ ...m, estabelecimentoNome: c.nome }))
         ));
       } else {
-        const list = await apiFetch<Maquina[]>("/maquinas");
+        // O servidor usa /maquina no singular conforme maquinaRoutes
+        const list = await apiFetch<Maquina[]>("/maquina");
         setMaquinas(Array.isArray(list) ? list : []);
       }
     } catch (err) {

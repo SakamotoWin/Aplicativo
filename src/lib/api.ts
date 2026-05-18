@@ -1,5 +1,5 @@
 // Tentando o servidor novo novamente, pois o Heroku deu Failed to Fetch.
-const API_BASE = "https://server.pixmachineapp.com.br/api";
+const API_BASE = "https://server.pixmachineapp.com.br";
 
 export type LoginTipo = "cliente" | "pessoa";
 
@@ -97,7 +97,10 @@ async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginP
 
   // Salvar informações importantes do retorno do novo servidor
   if (data.id) localStorage.setItem("userId", String(data.id));
+  // O servidor retorna 'key' como 'ADMIN' ou 'CLIENT'. O app usa 'userType' para controle.
   if (data.key) localStorage.setItem("userType", String(data.key));
+  // Também salvar o tipo original
+  if (data.type) localStorage.setItem("auth_tipo_original", String(data.type));
 
   return data;
 }
