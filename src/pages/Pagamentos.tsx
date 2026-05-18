@@ -81,7 +81,7 @@ export default function Pagamentos() {
       await Promise.allSettled(
         machines.map(async (m) => {
           try {
-            const path = isAdmin() ? `/pagamentos-adm/${m.id}` : `/pagamento/${m.id}`;
+            const path = isAdmin() ? `/pagamentos-adm/${m.id}` : `/pagamentos/${m.id}`;
             const data = await apiFetch<PagamentosData>(path);
             results.push({
               id: m.id,
