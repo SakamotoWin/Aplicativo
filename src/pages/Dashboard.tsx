@@ -47,21 +47,58 @@ export default function Dashboard() {
 
       console.log("[Dashboard] Carregando estatísticas para:", { userId, userType });
 
-      // Se for ADMIN, tentamos várias rotas possíveis para evitar 404
+      // O servidor só tem a rota /estatisticas-gerais/:clienteId
+      // Para ADMIN: buscar todos os clientes e somar as estatísticas de cada um
+      // Para CLIENTE: buscar diretamente com o userId
       let statsData: EstatisticasData;
-      // Baseado no arquivo dashboardRoutes.ts, a rota para estatísticas de um cliente específico é /dashboard/estatisticas-gerais/:id
-      // Como o ADMIN quer ver as estatísticas de um cliente ou gerais, vamos tentar as rotas que o servidor expõe.
+
       if (userType === "ADMIN") {
-        statsData = await apiFetchFirst<EstatisticasData>([
-          `/estatisticas-gerais/${userId}`,
-          "/estatisticas-gerais",
-          "/estatisticas-gerais-adm"
-        ]);
+        // Buscar lista de clientes
+        const clientes = await apiFetch<{ id: string }[]>("/clientes");
+        console.log("[Dashboard] Clientes encontrados:", clientes?.length);
+
+        // Buscar estatísticas de cada cliente e somar
+        const totais: EstatisticasData = {
+          totalVendas: 0,
+          formasPagamento: { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 },
+          maquinasOnline: 0,
+          maquinasTotal: 0,
+          totalEstornos: 0,
+          quantidadePremios: 0,
+        };
+
+        if (Array.isArray(clientes) && clientes.length > 0) {
+          const results = await Promise.allSettled(
+            clientes.map(c => apiFetch<EstatisticasData>(`/estatisticas-gerais/${c.id}`))
+          );
+
+          results.forEach((r) => {
+            if (r.status === "fulfilled" && r.value) {
+              const d = r.value;
+              totais.totalVendas = (totais.totalVendas || 0) + (d.totalVendas || 0);
+              totais.totalEstornos = (totais.totalEstornos || 0) + (d.totalEstornos || 0);
+              totais.maquinasOnline = (totais.maquinasOnline || 0) + (d.maquinasOnline || 0);
+              totais.maquinasTotal = (totais.maquinasTotal || 0) + (d.maquinasTotal || 0);
+              totais.quantidadePremios = (totais.quantidadePremios || 0) + (d.quantidadePremios || 0);
+              if (d.formasPagamento) {
+                const fp = totais.formasPagamento as any;
+                const dfp = d.formasPagamento as any;
+                fp.pix = (fp.pix || 0) + (dfp.pix || 0);
+                fp.especie = (fp.especie || 0) + (dfp.especie || 0);
+                fp.debito = (fp.debito || 0) + (dfp.debito || 0);
+                fp.credito = (fp.credito || 0) + (dfp.credito || 0);
+                fp.creditoRemoto = (fp.creditoRemoto || 0) + (dfp.creditoRemoto || 0);
+              }
+            }
+          });
+        }
+
+        statsData = totais;
       } else {
         statsData = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}`);
       }
+
       console.log("[Dashboard] Estatísticas:", statsData);
-      
       setData(statsData || {});
       setLastUpdate(new Date());
     } catch (err) {
