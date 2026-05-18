@@ -190,7 +190,8 @@ export async function apiFetch<T = unknown>(
       throw new Error(errorMessage || "Sessão expirada ou sem permissão. Por favor, faça login novamente.");
     }
 
-    throw new Error(errorMessage || `Erro ${res.status} em ${path}`);
+    const fullUrl = `${API_BASE}${path}`;
+    throw new Error(errorMessage || `Erro ${res.status} em ${path} (URL: ${fullUrl})`);
   }
 
   return rawData as T;

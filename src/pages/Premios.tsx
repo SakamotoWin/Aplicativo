@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, useCallback } from "react";
-import { apiFetch, isAdmin } from "@/lib/api";
+import { apiFetch, apiFetchFirst, isAdmin } from "@/lib/api";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Gift, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -61,10 +61,11 @@ export default function Premios() {
       await Promise.allSettled(
         machines.map(async (m) => {
           try {
-            const path = isAdmin()
-              ? `/premios-entregues-adm/${m.id}`
-              : `/premios-entregues/${m.id}`;
-            const data = await apiFetch<PremiosResponse | PremioItem[]>(path);
+            const paths = isAdmin()
+              ? [`/premios-entregues-adm/${m.id}`, `/api/premios-entregues-adm/${m.id}`]
+              : [`/premios-entregues/${m.id}`, `/api/premios-entregues/${m.id}`];
+            
+            const data = await apiFetchFirst<PremiosResponse | PremioItem[]>(paths);
             // Backend may return { premios: [...] } or an array directly
             let list: PremioItem[] = [];
             if (Array.isArray(data)) {

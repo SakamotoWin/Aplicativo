@@ -53,9 +53,9 @@ export default function Dashboard() {
       // Como o ADMIN quer ver as estatísticas de um cliente ou gerais, vamos tentar as rotas que o servidor expõe.
       if (userType === "ADMIN") {
         statsData = await apiFetchFirst<EstatisticasData>([
+          "/dashboard/estatisticas-gerais",
           "/dashboard/estatisticas-gerais-adm",
-          `/dashboard/estatisticas-gerais/${userId}`,
-          "/dashboard/estatisticas-gerais"
+          `/dashboard/estatisticas-gerais/${userId}`
         ]);
       } else {
         statsData = await apiFetch<EstatisticasData>(`/dashboard/estatisticas-gerais/${userId}`);
