@@ -8,6 +8,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface Transacao {
   id?: string;
@@ -57,9 +59,6 @@ const toNum = (v?: unknown): number => {
 const fmt = (v: number) => {
   return `R$ ${v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 };
-
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 
 export default function Transacoes() {
   const [transacoes, setTransacoes] = useState<Transacao[]>([]);

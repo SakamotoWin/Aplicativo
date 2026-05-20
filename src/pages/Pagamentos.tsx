@@ -3,6 +3,8 @@ import { apiFetch, isAdmin } from "@/lib/api";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Wallet, TrendingUp, Banknote, CreditCard, RefreshCw, Cpu } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface MaquinaItem {
   id: string;
@@ -49,9 +51,6 @@ const toNum = (v?: unknown): number => {
 const fmt = (v: number) => {
   return `R$ ${v.toFixed(2).replace(".", ",").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 };
-
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
 
 export default function Pagamentos() {
   const [resumos, setResumos] = useState<MaquinaResumo[]>([]);

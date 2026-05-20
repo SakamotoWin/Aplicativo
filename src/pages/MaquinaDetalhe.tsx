@@ -392,189 +392,152 @@ export default function MaquinaDetalhe() {
                 key={c.label}
                 className={`rounded-2xl border bg-card p-3 shadow-card ${c.color.split(" ")[0]}`}
               >
-                <div
-                  className={`mb-2 flex h-8 w-8 items-center justify-center rounded-lg ${c.color}`}
-                >
-                  <c.icon className="h-4 w-4" />
+                <div className="flex items-center gap-2 mb-1">
+                  <c.icon className="h-3.5 w-3.5" />
+                  <span className="text-[10px] font-semibold uppercase tracking-wider opacity-70">
+                    {c.label}
+                  </span>
                 </div>
-                <p className="text-lg font-bold text-foreground">{fmt(toNum(c.value))}</p>
-                <p className="text-xs text-muted-foreground">{c.label}</p>
+                <p className="font-display text-lg font-bold">{fmt(toNum(c.value))}</p>
               </div>
             ))}
           </div>
 
-          {chartEntries.length > 0 && (
-            <div className="rounded-2xl border border-primary/10 bg-card p-4 shadow-card">
-              <h3 className="mb-3 text-sm font-bold text-primary font-display tracking-wide">
-                Pagamentos por Dia
-              </h3>
-              <ResponsiveContainer width="100%" height={200}>
+          {/* Gráfico */}
+          <Card className="border-primary/10 bg-card/60 p-4">
+            <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground mb-4">
+              Vendas por Dia
+            </h3>
+            <div className="h-48 w-full">
+              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={chartEntries}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
                   <XAxis
                     dataKey="dia"
-                    tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                    stroke="hsl(var(--border))"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
                   />
                   <YAxis
-                    tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
-                    stroke="hsl(var(--border))"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
+                    tickFormatter={(v) => `R$${v}`}
                   />
                   <Tooltip
-                    formatter={(value: number) => [fmt(value), "Valor"]}
-                    contentStyle={{
-                      background: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: 8,
-                      fontSize: 12,
-                      color: "hsl(var(--foreground))",
-                    }}
+                    contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(245,166,35,0.2)", borderRadius: "8px" }}
+                    itemStyle={{ color: "#f5a623", fontWeight: "bold" }}
                   />
-                  <Bar dataKey="valor" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="valor" fill="#f5a623" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          )}
+          </Card>
         </TabsContent>
 
         {/* TRANSAÇÕES */}
-        <TabsContent value="transacoes" className="mt-4 space-y-3">
-          <div className="rounded-2xl border border-primary/10 bg-card p-3 shadow-card">
-            <div className="flex items-center gap-2 mb-2">
-              <CalendarIcon className="h-4 w-4 text-primary/60" />
-              <span className="text-xs font-medium text-foreground">Filtrar por data</span>
-            </div>
-            <div className="flex items-center gap-2">
+        <TabsContent value="transacoes" className="mt-4 space-y-4">
+          <Card className="border-primary/10 bg-card/60 p-3">
+            <div className="flex items-center gap-2 flex-wrap">
               <DatePicker label="De" date={dateFrom} onSelect={setDateFrom} />
               <DatePicker label="Até" date={dateTo} onSelect={setDateTo} />
               {(dateFrom || dateTo) && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearFilters}
-                  className="text-xs h-8 px-2 text-primary"
-                >
+                <Button variant="ghost" size="sm" onClick={clearFilters} className="text-xs h-8 text-primary">
                   Limpar
                 </Button>
               )}
             </div>
-            {(dateFrom || dateTo) && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                {filteredTransacoes.length} de {transacoes.length} registros
-              </p>
-            )}
-          </div>
+          </Card>
 
-          {filteredTransacoes.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {filteredTransacoes.map((p, i) => (
+          <div className="space-y-2">
+            {filteredTransacoes.length === 0 ? (
+              <p className="text-center text-xs text-muted-foreground py-8">Nenhuma transação encontrada</p>
+            ) : (
+              filteredTransacoes.map((t, i) => (
                 <div
-                  key={p.id || i}
+                  key={t.id || i}
                   className={cn(
-                    "flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 shadow-card",
-                    p.estornado && "opacity-50"
+                    "flex items-center justify-between rounded-xl border border-border/40 bg-secondary/30 p-3",
+                    t.estornado && "opacity-50"
                   )}
                 >
                   <div className="flex items-center gap-3">
-                    <div
-                      className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-lg",
-                        p.estornado ? "bg-destructive/10" : "bg-primary/10"
-                      )}
-                    >
-                      {getTypeIcon(p)}
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                      {getTypeIcon(t)}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">
-                        {getTypeLabel(p)}
-                        {p.estornado && (
-                          <span className="ml-1.5 text-xs text-destructive">(estornado)</span>
-                        )}
+                      <p className="text-sm font-medium">
+                        {getTypeLabel(t)}
+                        {t.estornado && <span className="ml-1 text-[10px] text-destructive">(Estornado)</span>}
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDateStr(p.data || p.dataHora)}
-                      </p>
+                      <p className="text-[10px] text-muted-foreground">{formatDateStr(t.data || t.dataHora)}</p>
                     </div>
                   </div>
-                  <p
-                    className={cn(
-                      "text-sm font-bold",
-                      p.estornado ? "text-destructive" : "text-primary"
-                    )}
-                  >
-                    {fmt(toNum(p.valor))}
+                  <p className={cn("text-sm font-bold", t.estornado ? "text-destructive" : "text-primary")}>
+                    {fmt(toNum(t.valor))}
                   </p>
                 </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState text="Nenhuma transação encontrada" />
-          )}
-        </TabsContent>
-
-        {/* PRÊMIOS */}
-        <TabsContent value="premios" className="mt-4 space-y-3">
-          {premios.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {premios.map((p, i) => (
-                <div
-                  key={p.id || i}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 shadow-card"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                    <Gift className="h-4 w-4 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">
-                      {p.quantidade ? `${p.quantidade}x ` : ""}
-                      Prêmio{p.quantidade && toNum(p.quantidade) > 1 ? "s" : ""}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatDateStr(p.data || p.dataHora)}
-                    </p>
-                    {p.observacao && (
-                      <p className="text-xs text-muted-foreground/70 mt-1">
-                        {String(p.observacao)}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState text="Nenhum prêmio encontrado" />
-          )}
-        </TabsContent>
-
-        {/* DETALHES */}
-        <TabsContent value="info" className="mt-4">
-          <div className="rounded-2xl border border-primary/10 bg-card p-4 shadow-card space-y-2">
-            {maquina.maquininha_serial && (
-              <InfoRow icon={Cpu} label="Serial (MP)" value={maquina.maquininha_serial} />
-            )}
-            {maquina.store_id && (
-              <InfoRow icon={Cpu} label="Store ID (PAG)" value={maquina.store_id} />
-            )}
-            <InfoRow
-              icon={DollarSign}
-              label="Último pagamento"
-              value={formatDateStr(maquina.ultimoPagamentoRecebido)}
-            />
-            <InfoRow
-              icon={Clock}
-              label="Última requisição"
-              value={formatDateStr(maquina.ultimaRequisicao)}
-            />
-            {maquina.dataInclusao && (
-              <InfoRow
-                icon={Clock}
-                label="Data inclusão"
-                value={formatDateStr(maquina.dataInclusao)}
-              />
+              ))
             )}
           </div>
         </TabsContent>
+
+        {/* PRÊMIOS */}
+        <TabsContent value="premios" className="mt-4 space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl border border-primary/20 bg-card p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Entregues</p>
+              <p className="font-display text-xl font-bold text-primary">{premios.length}</p>
+            </div>
+            <div className="rounded-2xl border border-primary/20 bg-card p-3">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-1">Estoque</p>
+              <p className="font-display text-xl font-bold text-primary">—</p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {premios.length === 0 ? (
+              <p className="text-center text-xs text-muted-foreground py-8">Nenhum prêmio registrado</p>
+            ) : (
+              premios.map((p, i) => (
+                <div key={i} className="flex items-center justify-between rounded-xl border border-border/40 bg-secondary/30 p-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Gift className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Prêmio Entregue</p>
+                      <p className="text-[10px] text-muted-foreground">{formatDateStr(p.data || p.dataHora)}</p>
+                    </div>
+                  </div>
+                  {p.quantidade && <p className="text-xs font-bold text-primary">x{p.quantidade}</p>}
+                </div>
+              ))
+            )}
+          </div>
+        </TabsContent>
+
+        {/* DETALHES */}
+        <TabsContent value="info" className="mt-4 space-y-3">
+          <InfoRow label="ID da Máquina" value={maquina.id} />
+          <InfoRow label="Nome" value={maquina.nome || "—"} />
+          <InfoRow label="Local" value={maquina.descricao || maquina.localizacao || "—"} />
+          <InfoRow label="Serial MP" value={maquina.maquininha_serial || "—"} />
+          <InfoRow label="Store ID" value={maquina.store_id || "—"} />
+          <InfoRow label="Data de Inclusão" value={formatDateStr(maquina.dataInclusao)} />
+          <InfoRow label="Última Requisição" value={formatDateStr(maquina.ultimaRequisicao)} />
+          <InfoRow label="Último Pagamento" value={formatDateStr(maquina.ultimoPagamentoRecebido)} />
+        </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-border/40 bg-secondary/20 p-3">
+      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1">{label}</p>
+      <p className="text-sm font-medium text-foreground break-all">{value}</p>
     </div>
   );
 }
@@ -594,7 +557,7 @@ function DatePicker({
         <Button
           variant="outline"
           className={cn(
-            "h-8 flex-1 justify-start text-left text-xs font-normal border-primary/20",
+            "h-8 flex-1 justify-start text-left text-xs font-normal border-primary/20 bg-secondary/50",
             !date && "text-muted-foreground"
           )}
         >
@@ -602,7 +565,7 @@ function DatePicker({
           {date ? format(date, "dd/MM/yyyy") : label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 border-primary/20" align="start">
+      <PopoverContent className="w-auto p-0 border-primary/20 bg-card" align="start">
         <Calendar
           mode="single"
           selected={date}
@@ -612,33 +575,5 @@ function DatePicker({
         />
       </PopoverContent>
     </Popover>
-  );
-}
-
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl bg-secondary/50 px-3 py-2">
-      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary/60" />
-      <div>
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="text-sm font-medium text-foreground">{value}</p>
-      </div>
-    </div>
-  );
-}
-
-function EmptyState({ text }: { text: string }) {
-  return (
-    <div className="rounded-2xl border border-border bg-card p-8 text-center shadow-card">
-      <p className="text-sm text-muted-foreground">{text}</p>
-    </div>
   );
 }

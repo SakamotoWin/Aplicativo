@@ -55,7 +55,6 @@ export default function Dashboard() {
   const fetchData = useCallback(async (periodoParam?: Periodo) => {
     try {
       const userId = getUserId();
-      const userType = getUserType();
       const currentPeriodo = periodoParam || periodo;
       
       if (!userId) {
@@ -63,11 +62,11 @@ export default function Dashboard() {
         return;
       }
 
-      console.log("[Dashboard] Carregando estatísticas para:", { userId, userType, periodo: currentPeriodo });
+      console.log("[Dashboard] Carregando estatísticas para:", { userId, isAdmin: isAdmin(), periodo: currentPeriodo });
 
       const periodoQuery = currentPeriodo !== "todos" ? `?periodo=${currentPeriodo}` : "";
 
-      if (userType === "ADMIN") {
+      if (isAdmin()) {
         // Buscar lista de clientes
         const clientes = await apiFetch<{ id: string; nome: string }[]>("/clientes");
         console.log("[Dashboard] Clientes encontrados:", clientes?.length);

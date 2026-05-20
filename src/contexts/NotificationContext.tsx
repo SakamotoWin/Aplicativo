@@ -104,7 +104,8 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
         const clientes = await apiFetch<ClienteItem[]>("/clientes");
         machines = Array.isArray(clientes) ? clientes.flatMap((c) => c.Maquina || []) : [];
       } else {
-        const list = await apiFetch<MachineItem[]>("/maquinas");
+        // O servidor usa /maquina no singular
+        const list = await apiFetch<MachineItem[]>("/maquina");
         machines = Array.isArray(list) ? list : [];
       }
       for (const m of machines) {

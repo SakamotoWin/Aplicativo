@@ -3,6 +3,8 @@ import { apiFetch, apiFetchFirst, isAdmin } from "@/lib/api";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { Gift, RefreshCw } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Search } from "lucide-react";
 
 interface PremioItem {
   id?: string;
@@ -33,9 +35,6 @@ interface ClienteItem {
   Maquina: MaquinaItem[];
 }
 
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-
 export default function Premios() {
   const [premios, setPremios] = useState<PremioItem[]>([]);
   const [search, setSearch] = useState("");
@@ -47,12 +46,15 @@ export default function Premios() {
   const fetchData = useCallback(async () => {
     try {
       // Step 1: fetch all machines
-      let machines: MaquinaItem[] = [];
+      let machines: (MaquinaItem & { estabelecimentoNome?: string })[] = [];
       if (isAdmin()) {
         const clientes = await apiFetch<ClienteItem[]>("/clientes");
-        machines = Array.isArray(clientes) ? clientes.flatMap((c) => c.Maquina ? c.Maquina.map(m => ({...m, estabelecimentoNome: c.nome})) : []) : [];
+        machines = Array.isArray(clientes) ? clientes.flatMap((c) => 
+          (c.Maquina || []).map(m => ({ ...m, estabelecimentoNome: c.nome }))
+        ) : [];
       } else {
-        const list = await apiFetch<MaquinaItem[]>("/maquinas");
+        // O servidor usa /maquina no singular
+        const list = await apiFetch<MaquinaItem[]>("/maquina");
         machines = Array.isArray(list) ? list : [];
       }
 
@@ -74,7 +76,11 @@ export default function Premios() {
               list = (data as PremiosResponse).premios!;
             }
             list.forEach((p) => {
-              allPremios.push({ ...p, maquinaNome: m.nome || m.id, estabelecimentoNome: m.estabelecimentoNome });
+              allPremios.push({ 
+                ...p, 
+                maquinaNome: m.nome || m.id, 
+                estabelecimentoNome: (m as any).estabelecimentoNome 
+              });
             });
           } catch (err) {
             console.warn(`[Premios] Erro máquina ${m.id}:`, err);

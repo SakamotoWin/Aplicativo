@@ -1,6 +1,9 @@
 // Tentando o servidor novo novamente, pois o Heroku deu Failed to Fetch.
 const API_BASE = "https://server.pixmachineapp.com.br";
 
+// ID Master do Administrador no Servidor
+const ADMIN_MASTER_ID = "dcfe1380-80d2-4652-aca0-e0accdf05f90";
+
 export type LoginTipo = "cliente" | "pessoa";
 
 export function getToken(): string | null {
@@ -20,6 +23,7 @@ export function clearToken() {
   localStorage.removeItem("auth_tipo");
   localStorage.removeItem("userType");
   localStorage.removeItem("userId");
+  localStorage.removeItem("auth_tipo_original");
 }
 
 export function getAuthTipo(): LoginTipo | null {
@@ -57,6 +61,9 @@ interface LoginResponse {
   name?: string;
   error?: string;
   message?: string;
+  id?: string;
+  key?: string;
+  type?: string;
   [key: string]: unknown;
 }
 
@@ -73,7 +80,6 @@ async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginP
   console.log("[AUTH] POST", url);
   console.log("[AUTH] Body:", { email: payload.email, senha: "***" });
 
-  console.log("[AUTH] Tentando login em:", url);
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -96,9 +102,20 @@ async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginP
   }
 
   // Salvar informações importantes do retorno do novo servidor
-  if (data.id) localStorage.setItem("userId", String(data.id));
+  if (data.id) {
+    localStorage.setItem("userId", String(data.id));
+  }
+  
   // O servidor retorna 'key' como 'ADMIN' ou 'CLIENT'. O app usa 'userType' para controle.
-  if (data.key) localStorage.setItem("userType", String(data.key));
+  if (data.key) {
+    localStorage.setItem("userType", String(data.key));
+  } else if (path === "/login-pessoa") {
+    // Fallback para admin se a key não vier
+    localStorage.setItem("userType", "ADMIN");
+  } else {
+    localStorage.setItem("userType", "CLIENT");
+  }
+
   // Também salvar o tipo original
   if (data.type) localStorage.setItem("auth_tipo_original", String(data.type));
 
@@ -118,14 +135,17 @@ export function getUserType(): string | null {
 }
 
 export function getUserId(): string | null {
-  return localStorage.getItem("userId");
+  const storedId = localStorage.getItem("userId");
+  // Se for admin, sempre priorizar o ADMIN_MASTER_ID para chamadas de estatísticas globais
+  if (isAdmin()) {
+    return ADMIN_MASTER_ID;
+  }
+  return storedId;
 }
 
 export function isAdmin(): boolean {
-  return getUserType() === "ADMIN";
+  return getUserType() === "ADMIN" || getAuthTipo() === "pessoa";
 }
-
-
 
 export async function apiFetch<T = unknown>(
   path: string,
@@ -157,20 +177,15 @@ export async function apiFetch<T = unknown>(
 
   let rawData = await parseResponse(res);
   console.log("[API] Status:", res.status);
-  console.log("[API] Response:", rawData);
   
-  // Log detalhado da resposta para debug
   if (!res.ok) {
     console.error("[API] Erro completo:", {
       status: res.status,
       statusText: res.statusText,
       responseBody: rawData,
       url: url,
-      headers: Object.fromEntries(res.headers.entries()),
     });
-  }
 
-  if (!res.ok) {
     const errorMessage =
       typeof rawData === "object" && rawData !== null
         ? ((rawData as { error?: string; message?: string }).error ||
@@ -183,15 +198,15 @@ export async function apiFetch<T = unknown>(
         url,
         errorMessage,
       });
-      // Limpa o token para forçar re-login se for erro de autenticação real
+      
       if (errorMessage?.toLowerCase().includes("token") || errorMessage?.toLowerCase().includes("expirado")) {
-        clearToken();
+        // Opcional: não limpar o token imediatamente para permitir retries ou debug
+        // clearToken(); 
       }
       throw new Error(errorMessage || "Sessão expirada ou sem permissão. Por favor, faça login novamente.");
     }
 
-    const fullUrl = `${API_BASE}${path}`;
-    throw new Error(errorMessage || `Erro ${res.status} em ${path} (URL: ${fullUrl})`);
+    throw new Error(errorMessage || `Erro ${res.status} em ${path}`);
   }
 
   return rawData as T;
