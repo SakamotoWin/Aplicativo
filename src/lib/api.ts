@@ -134,11 +134,13 @@ export function isAdmin(): boolean {
 }
 
 export function getUserId(): string | null {
-  // Se for admin, sempre priorizar o ADMIN_MASTER_ID para chamadas de estatísticas globais
+  const localId = localStorage.getItem("userId");
+  // Se for admin, priorizamos o ADMIN_MASTER_ID para estatísticas globais,
+  // mas se ele não existir, usamos o ID do usuário logado.
   if (isAdmin()) {
-    return ADMIN_MASTER_ID;
+    return ADMIN_MASTER_ID || localId;
   }
-  return localStorage.getItem("userId");
+  return localId;
 }
 
 export async function apiFetch<T = unknown>(
@@ -147,8 +149,10 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   const token = getToken();
   const url = `${API_BASE}${path}`;
+  console.log(`[API] Chamando: ${url}`);
 
   if (!token || token.trim().length === 0) {
+    console.error("[API] Erro: Token não encontrado.");
     throw new Error("Token não encontrado. Faça login novamente.");
   }
 
