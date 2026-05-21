@@ -137,8 +137,17 @@ export default function MaquinaDetalhe() {
     async function load() {
       if (!id) return;
       try {
-        const path = isAdmin() ? `/maquina-adm/${id}` : `/maquina/${id}`;
-        const data = await apiFetch<MaquinaData>(path);
+        let data: MaquinaData;
+        if (isAdmin()) {
+          data = await apiFetch<MaquinaData>(`/maquina-adm/${id}`);
+        } else {
+          // Tentar plural e depois singular para cliente
+          try {
+            data = await apiFetch<MaquinaData>(`/maquinas/${id}`);
+          } catch (err) {
+            data = await apiFetch<MaquinaData>(`/maquina/${id}`);
+          }
+        }
         setMaquina(data);
         setEditNome(data.nome || "");
         setEditLocal(data.descricao || data.localizacao || "");
@@ -214,13 +223,24 @@ export default function MaquinaDetalhe() {
     acc[day] = (acc[day] || 0) + toNum(t.valor);
     return acc;
   }, {});
+  console.log("[MaquinaDetalhe] Processando dados do gráfico. Transações:", transacoes.length);
   const chartEntries = Object.entries(chartData)
     .map(([dia, valor]) => ({ dia, valor }))
     .sort((a, b) => {
-      const [dA, mA, yA] = a.dia.split("/").map(Number);
-      const [dB, mB, yB] = b.dia.split("/").map(Number);
-      return new Date(yA, mA - 1, dA).getTime() - new Date(yB, mB - 1, dB).getTime();
+      try {
+        const partsA = a.dia.split("/");
+        const partsB = b.dia.split("/");
+        if (partsA.length !== 3 || partsB.length !== 3) return 0;
+        
+        const [dA, mA, yA] = partsA.map(Number);
+        const [dB, mB, yB] = partsB.map(Number);
+        return new Date(yA, mA - 1, dA).getTime() - new Date(yB, mB - 1, dB).getTime();
+      } catch (e) {
+        console.error("[MaquinaDetalhe] Erro ao ordenar datas do gráfico:", e);
+        return 0;
+      }
     });
+  console.log("[MaquinaDetalhe] Entradas do gráfico processadas:", chartEntries.length);
 
   // Normalize field names (admin uses cash/creditosRemotos, client uses especie/creditoRemoto)
   const normalizedResumo = {
@@ -409,28 +429,34 @@ export default function MaquinaDetalhe() {
               Vendas por Dia
             </h3>
             <div className="h-48 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartEntries}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis
-                    dataKey="dia"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
-                    tickFormatter={(v) => `R$${v}`}
-                  />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(245,166,35,0.2)", borderRadius: "8px" }}
-                    itemStyle={{ color: "#f5a623", fontWeight: "bold" }}
-                  />
-                  <Bar dataKey="valor" fill="#f5a623" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+              {chartEntries.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartEntries}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
+                    <XAxis
+                      dataKey="dia"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 10, fill: "rgba(255,255,255,0.4)" }}
+                      tickFormatter={(v) => `R$${v}`}
+                    />
+                    <Tooltip
+                      contentStyle={{ backgroundColor: "#1a1a1a", border: "1px solid rgba(245,166,35,0.2)", borderRadius: "8px" }}
+                      itemStyle={{ color: "#f5a623", fontWeight: "bold" }}
+                    />
+                    <Bar dataKey="valor" fill="#f5a623" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
+                  Sem dados para exibir no gráfico
+                </div>
+              )}
             </div>
           </Card>
         </TabsContent>
