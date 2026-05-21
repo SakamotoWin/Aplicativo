@@ -223,23 +223,22 @@ export default function MaquinaDetalhe() {
     acc[day] = (acc[day] || 0) + toNum(t.valor);
     return acc;
   }, {});
-  console.log("[MaquinaDetalhe] Processando dados do gráfico. Transações:", transacoes.length);
-  const chartEntries = Object.entries(chartData)
-    .map(([dia, valor]) => ({ dia, valor }))
-    .sort((a, b) => {
-      try {
+  console.log("[MaquinaDetalhe] Processando dados do gráfico. Transações:", transacoes?.length);
+  let chartEntries: { dia: string; valor: number }[] = [];
+  try {
+    chartEntries = Object.entries(chartData)
+      .map(([dia, valor]) => ({ dia, valor }))
+      .sort((a, b) => {
         const partsA = a.dia.split("/");
         const partsB = b.dia.split("/");
         if (partsA.length !== 3 || partsB.length !== 3) return 0;
-        
         const [dA, mA, yA] = partsA.map(Number);
         const [dB, mB, yB] = partsB.map(Number);
         return new Date(yA, mA - 1, dA).getTime() - new Date(yB, mB - 1, dB).getTime();
-      } catch (e) {
-        console.error("[MaquinaDetalhe] Erro ao ordenar datas do gráfico:", e);
-        return 0;
-      }
-    });
+      });
+  } catch (e) {
+    console.error("[MaquinaDetalhe] Erro crítico no processamento do gráfico:", e);
+  }
   console.log("[MaquinaDetalhe] Entradas do gráfico processadas:", chartEntries.length);
 
   // Normalize field names (admin uses cash/creditosRemotos, client uses especie/creditoRemoto)
@@ -281,8 +280,9 @@ export default function MaquinaDetalhe() {
     setDateTo(undefined);
   };
 
-  return (
-    <div className="animate-fade-in space-y-4 pb-4">
+  try {
+    return (
+      <div className="animate-fade-in space-y-4 pb-4">
       {/* Top bar */}
       <div className="flex items-center justify-between">
         <button
@@ -556,7 +556,16 @@ export default function MaquinaDetalhe() {
         </TabsContent>
       </Tabs>
     </div>
-  );
+    );
+  } catch (e) {
+    console.error("[MaquinaDetalhe] Erro fatal na renderização:", e);
+    return (
+      <div className="p-6 text-center">
+        <p className="text-destructive font-bold">Erro ao carregar esta página.</p>
+        <Button onClick={() => navigate(-1)} className="mt-4">Voltar</Button>
+      </div>
+    );
+  }
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {
