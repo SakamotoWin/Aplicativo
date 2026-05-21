@@ -65,16 +65,7 @@ export default function Dashboard() {
       const periodoQuery = currentPeriodo !== "todos" ? `?periodo=${currentPeriodo}` : "";
 
       if (isAdmin()) {
-        // Para Admin, buscamos primeiro as estatísticas globais usando o ADMIN_MASTER_ID
-        // getUserId() já retorna o ADMIN_MASTER_ID se isAdmin() for true
-        let globalStats: EstatisticasData = {};
-        try {
-          globalStats = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}${periodoQuery}`);
-        } catch (err) {
-          console.warn("[Dashboard] Erro ao carregar estatísticas globais:", err);
-        }
-        
-        // Também buscamos a lista de clientes para detalhamento
+        // Para Admin, buscamos a lista de clientes
         let clientes: { id: string; nome: string }[] = [];
         try {
           clientes = await apiFetch<{ id: string; nome: string }[]>("/clientes");
@@ -84,12 +75,19 @@ export default function Dashboard() {
         
         const clienteResults: ClienteEstatistica[] = [];
         
-        // Adicionamos o resumo global como o primeiro item
-        clienteResults.push({
-          id: "global",
-          nome: "Resumo Geral",
-          stats: globalStats,
-        });
+        // Tentamos buscar as estatísticas globais usando o ID Master
+        try {
+          const globalStats = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}${periodoQuery}`);
+          if (globalStats && (toNum(globalStats.totalVendas) > 0 || toNum(globalStats.maquinasTotal) > 0)) {
+            clienteResults.push({
+              id: "global",
+              nome: "Resumo Geral",
+              stats: globalStats,
+            });
+          }
+        } catch (err) {
+          console.warn("[Dashboard] Erro ao carregar estatísticas globais:", err);
+        }
 
         if (Array.isArray(clientes) && clientes.length > 0) {
           // Buscamos estatísticas individuais de cada cliente
@@ -110,7 +108,7 @@ export default function Dashboard() {
 
         setClienteStats(clienteResults);
       } else {
-        // Cliente normal: buscar apenas suas próprias estatísticas
+        // Cliente normal
         const stats = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}${periodoQuery}`);
         setClienteStats([{
           id: userId,
@@ -152,20 +150,23 @@ export default function Dashboard() {
     c.nome.toLowerCase().includes(search.toLowerCase())
   );
 
-  // Usar os dados globais se existirem, senão calcular a partir dos filtrados (fallback)
-  const totais: EstatisticasData = globalEntry && Object.keys(globalEntry.stats).length > 0 
-    ? globalEntry.stats 
-    : {
-        totalVendas: 0,
-        formasPagamento: { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 },
-        maquinasOnline: 0,
-        maquinasTotal: 0,
-        totalEstornos: 0,
-        quantidadePremios: 0,
-      };
+  // LÓGICA DE CONSOLIDAÇÃO:
+  // Se temos uma entrada global com valores reais, usamos ela.
+  // Caso contrário, calculamos a soma de todos os clientes individuais.
+  const totais: EstatisticasData = {
+    totalVendas: 0,
+    formasPagamento: { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 },
+    maquinasOnline: 0,
+    maquinasTotal: 0,
+    totalEstornos: 0,
+    quantidadePremios: 0,
+  };
 
-  // Se não temos dados globais reais, somamos os individuais
-  if (!globalEntry || Object.keys(globalEntry.stats).length === 0) {
+  if (globalEntry && toNum(globalEntry.stats.totalVendas) > 0) {
+    // Usar dados globais do servidor
+    Object.assign(totais, globalEntry.stats);
+  } else {
+    // Calcular soma manual (fallback robusto)
     individualStats.forEach(c => {
       const d = c.stats;
       totais.totalVendas = (totais.totalVendas || 0) + toNum(d.totalVendas);
@@ -174,7 +175,6 @@ export default function Dashboard() {
       totais.maquinasTotal = (totais.maquinasTotal || 0) + toNum(d.maquinasTotal);
       totais.quantidadePremios = (totais.quantidadePremios || 0) + toNum(d.quantidadePremios);
       if (d.formasPagamento) {
-        if (!totais.formasPagamento) totais.formasPagamento = { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 };
         const fp = totais.formasPagamento as FormasPagamento;
         fp.pix += toNum(d.formasPagamento.pix);
         fp.especie += toNum(d.formasPagamento.especie);
@@ -199,9 +199,9 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="font-display text-2xl font-bold tracking-wider text-foreground">Dashboard</h1>
-          <p className="mt-1 text-[10px] text-muted-foreground uppercase tracking-widest">
-            {isAdmin() ? "Administrador" : "Cliente"} • {lastUpdate.toLocaleTimeString("pt-BR")}
+          <h1 className="font-display text-2xl font-bold tracking-wider text-foreground uppercase">Dashboard</h1>
+          <p className="mt-1 text-[10px] text-muted-foreground uppercase tracking-[2px]">
+            {isAdmin() ? "ADMINISTRADOR" : "CLIENTE"} • {lastUpdate.toLocaleTimeString("pt-BR")}
           </p>
         </div>
         <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/5">
@@ -223,10 +223,10 @@ export default function Dashboard() {
             key={p.value}
             variant={periodo === p.value ? "default" : "outline"}
             size="sm"
-            className={`text-xs h-8 px-4 rounded-full transition-all ${
+            className={`text-[10px] font-bold h-8 px-5 rounded-full transition-all uppercase tracking-wider ${
               periodo === p.value 
-                ? "bg-primary text-primary-foreground shadow-gold border-primary" 
-                : "bg-card/40 border-primary/10 text-muted-foreground"
+                ? "bg-primary text-black shadow-gold border-primary" 
+                : "bg-card/40 border-primary/10 text-muted-foreground hover:border-primary/30"
             }`}
             onClick={() => handlePeriodoChange(p.value)}
           >
@@ -236,34 +236,40 @@ export default function Dashboard() {
       </div>
 
       {/* Totais Gerais */}
-      <Card className="relative overflow-hidden border-primary/30 bg-card p-5 shadow-gold">
+      <Card className="relative overflow-hidden border-primary/30 bg-[#161616] p-6 shadow-gold rounded-2xl">
         <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/5 blur-3xl" />
-        <div className="relative space-y-4">
+        <div className="relative space-y-6">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">Vendas Totais</p>
-            <p className="font-display text-3xl font-bold text-primary">{fmt(toNum(totais.totalVendas))}</p>
+            <p className="text-[10px] font-bold uppercase tracking-[3px] text-muted-foreground mb-1">Vendas Totais</p>
+            <p className="font-display text-4xl font-black text-primary tracking-tight">
+              {fmt(toNum(totais.totalVendas))}
+            </p>
           </div>
           
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <StatBox label="PIX" value={fmt(fp.pix)} color="text-blue-400" />
             <StatBox label="Espécie" value={fmt(fp.especie)} color="text-green-400" />
             <StatBox label="Débito" value={fmt(fp.debito)} color="text-yellow-400" />
             <StatBox label="Crédito" value={fmt(fp.credito)} color="text-purple-400" />
           </div>
 
-          <div className="pt-2 border-t border-primary/10 grid grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <Wifi className="h-3.5 w-3.5 text-success" />
+          <div className="pt-4 border-t border-primary/10 grid grid-cols-2 gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center">
+                <Wifi className="h-4 w-4 text-success" />
+              </div>
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Online</span>
-                <span className="text-xs font-bold text-foreground">{toNum(totais.maquinasOnline)}/{toNum(totais.maquinasTotal)}</span>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Online</span>
+                <span className="text-sm font-black text-foreground">{toNum(totais.maquinasOnline)}/{toNum(totais.maquinasTotal)}</span>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-3.5 w-3.5 text-destructive" />
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-lg bg-destructive/10 flex items-center justify-center">
+                <BarChart3 className="h-4 w-4 text-destructive" />
+              </div>
               <div className="flex flex-col">
-                <span className="text-[9px] font-bold text-muted-foreground uppercase">Estornos</span>
-                <span className="text-xs font-bold text-foreground">{fmt(toNum(totais.totalEstornos))}</span>
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">Estornos</span>
+                <span className="text-sm font-black text-foreground">{fmt(toNum(totais.totalEstornos))}</span>
               </div>
             </div>
           </div>
@@ -272,13 +278,13 @@ export default function Dashboard() {
 
       {/* Busca */}
       {isAdmin() && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <div className="relative group">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
           <Input
             placeholder="Buscar estabelecimento..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-card/60 border-primary/10 h-10 rounded-xl"
+            className="pl-11 bg-[#161616] border-primary/10 h-12 rounded-2xl focus:border-primary/40 focus:ring-0 transition-all text-sm"
           />
         </div>
       )}
@@ -287,30 +293,30 @@ export default function Dashboard() {
       {isAdmin() && filtered.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Estabelecimentos ({filtered.length})
+            <h2 className="text-[10px] font-bold uppercase tracking-[3px] text-muted-foreground">
+              ESTABELECIMENTOS ({filtered.length})
             </h2>
           </div>
           <div className="flex flex-col gap-3">
             {filtered.map((c) => {
               const cfp = c.stats.formasPagamento || { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 };
               return (
-                <Card key={c.id} className="border-primary/5 bg-card/40 p-4 transition-all active:scale-[0.98]">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 border border-primary/10">
-                        <Cpu className="h-4.5 w-4.5 text-primary" />
+                <Card key={c.id} className="border-primary/5 bg-[#161616]/60 p-5 rounded-2xl transition-all active:scale-[0.98] hover:border-primary/20">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 border border-primary/10">
+                        <Cpu className="h-5 w-5 text-primary" />
                       </div>
                       <div>
                         <p className="text-sm font-bold text-foreground">{c.nome}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {toNum(c.stats.maquinasOnline)} de {toNum(c.stats.maquinasTotal)} online
+                        <p className="text-[10px] text-muted-foreground font-medium">
+                          {toNum(c.stats.maquinasOnline)} de {toNum(c.stats.maquinasTotal)} máquinas online
                         </p>
                       </div>
                     </div>
-                    <p className="font-display text-base font-bold text-primary">{fmt(toNum(c.stats.totalVendas))}</p>
+                    <p className="font-display text-lg font-black text-primary">{fmt(toNum(c.stats.totalVendas))}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-2 gap-2.5">
                     <StatRow icon={Banknote} label="PIX" value={fmt(toNum(cfp.pix))} color="text-blue-400" small />
                     <StatRow icon={Banknote} label="Espécie" value={fmt(toNum(cfp.especie))} color="text-green-400" small />
                     <StatRow icon={CreditCard} label="Débito" value={fmt(toNum(cfp.debito))} color="text-yellow-400" small />
@@ -324,12 +330,12 @@ export default function Dashboard() {
       )}
 
       {clienteStats.length === 0 && !error && (
-        <Card className="border-dashed border-primary/20 bg-card/20 p-12 text-center">
+        <Card className="border-dashed border-primary/20 bg-card/20 p-12 text-center rounded-2xl">
           <div className="flex flex-col items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-primary/5 flex items-center justify-center">
-              <TrendingUp className="h-6 w-6 text-primary/20" />
+            <div className="h-16 w-16 rounded-full bg-primary/5 flex items-center justify-center">
+              <TrendingUp className="h-8 w-8 text-primary/10" />
             </div>
-            <p className="text-sm text-muted-foreground">Nenhum dado disponível no momento</p>
+            <p className="text-sm font-medium text-muted-foreground tracking-wide">Nenhum dado disponível no momento</p>
           </div>
         </Card>
       )}
@@ -339,9 +345,9 @@ export default function Dashboard() {
 
 function StatBox({ label, value, color }: { label: string; value: string; color: string }) {
   return (
-    <div className="flex flex-col gap-0.5 rounded-xl bg-primary/5 p-2.5 border border-primary/5">
-      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider">{label}</span>
-      <span className={`text-sm font-bold ${color}`}>{value}</span>
+    <div className="flex flex-col gap-1 rounded-2xl bg-[#111] p-3.5 border border-primary/5">
+      <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-[2px]">{label}</span>
+      <span className={`text-base font-black ${color} tracking-tight`}>{value}</span>
     </div>
   );
 }
@@ -360,11 +366,11 @@ function StatRow({
   small?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 rounded-lg bg-secondary/30 px-2 py-1.5 border border-primary/5">
-      <Icon className={`h-3 w-3 shrink-0 ${color}`} />
+    <div className="flex items-center gap-2.5 rounded-xl bg-[#111] px-3 py-2 border border-primary/5">
+      <Icon className={`h-3.5 w-3.5 shrink-0 ${color}`} />
       <div className="flex flex-col">
-        <span className="text-[8px] font-bold text-muted-foreground uppercase leading-none mb-0.5">{label}</span>
-        <span className={`font-bold text-foreground ${small ? "text-[10px]" : "text-xs"}`}>
+        <span className="text-[8px] font-bold text-muted-foreground uppercase tracking-wider leading-none mb-1">{label}</span>
+        <span className={`font-black text-foreground ${small ? "text-[11px]" : "text-xs"}`}>
           {value}
         </span>
       </div>
