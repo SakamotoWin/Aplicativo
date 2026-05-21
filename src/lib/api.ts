@@ -7,8 +7,7 @@ const ADMIN_MASTER_ID = "dcfe1380-80d2-4652-aca0-e0accdf05f90";
 export type LoginTipo = "cliente" | "pessoa";
 
 export function getToken(): string | null {
-  const token = localStorage.getItem("token");
-  return token;
+  return localStorage.getItem("token");
 }
 
 export function setToken(token: string) {
@@ -130,6 +129,7 @@ export function getUserType(): string | null {
 export function isAdmin(): boolean {
   const type = getUserType();
   const authTipo = getAuthTipo();
+  // Se o login foi via /login-pessoa ou a key retornada foi ADMIN
   return type === "ADMIN" || authTipo === "pessoa";
 }
 
@@ -152,6 +152,9 @@ export async function apiFetch<T = unknown>(
     throw new Error("Token não encontrado. Faça login novamente.");
   }
 
+  // Se o usuário é admin (pessoa), o servidor valida o token com JWT_SECRET_PESSOA.
+  // Se é cliente, usa JWT_SECRET. 
+  // O aplicativo envia o token no header x-access-token e Authorization.
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     "x-access-token": token,
@@ -174,6 +177,10 @@ export async function apiFetch<T = unknown>(
         : undefined;
 
     if (res.status === 401) {
+      // Se der 401, tentamos limpar os dados para forçar novo login, mas apenas se for erro de token mesmo
+      if (errorMessage?.toLowerCase().includes("token")) {
+         // clearToken(); // Descomentar se quiser forçar logout em erro de token
+      }
       throw new Error(errorMessage || "Sessão expirada ou sem permissão. Por favor, faça login novamente.");
     }
 

@@ -67,14 +67,24 @@ export default function Dashboard() {
       if (isAdmin()) {
         // Para Admin, buscamos primeiro as estatísticas globais usando o ADMIN_MASTER_ID
         // getUserId() já retorna o ADMIN_MASTER_ID se isAdmin() for true
-        const globalStats = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}${periodoQuery}`);
+        let globalStats: EstatisticasData = {};
+        try {
+          globalStats = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}${periodoQuery}`);
+        } catch (err) {
+          console.warn("[Dashboard] Erro ao carregar estatísticas globais:", err);
+        }
         
         // Também buscamos a lista de clientes para detalhamento
-        const clientes = await apiFetch<{ id: string; nome: string }[]>("/clientes");
+        let clientes: { id: string; nome: string }[] = [];
+        try {
+          clientes = await apiFetch<{ id: string; nome: string }[]>("/clientes");
+        } catch (err) {
+          console.warn("[Dashboard] Erro ao carregar lista de clientes:", err);
+        }
         
         const clienteResults: ClienteEstatistica[] = [];
         
-        // Adicionamos o resumo global como o primeiro item se houver dados
+        // Adicionamos o resumo global como o primeiro item
         clienteResults.push({
           id: "global",
           nome: "Resumo Geral",
@@ -82,7 +92,7 @@ export default function Dashboard() {
         });
 
         if (Array.isArray(clientes) && clientes.length > 0) {
-          // Buscamos estatísticas individuais de cada cliente para a lista detalhada
+          // Buscamos estatísticas individuais de cada cliente
           const results = await Promise.allSettled(
             clientes.map(c => apiFetch<EstatisticasData>(`/estatisticas-gerais/${c.id}${periodoQuery}`))
           );
@@ -112,7 +122,7 @@ export default function Dashboard() {
       setLastUpdate(new Date());
       setError("");
     } catch (err) {
-      console.warn("[Dashboard] Erro ao carregar estatísticas:", err);
+      console.warn("[Dashboard] Erro fatal no Dashboard:", err);
       setError(err instanceof Error ? err.message : "Erro ao carregar dashboard");
     }
   }, [periodo]);
@@ -143,17 +153,20 @@ export default function Dashboard() {
   );
 
   // Usar os dados globais se existirem, senão calcular a partir dos filtrados (fallback)
-  const totais: EstatisticasData = globalEntry ? globalEntry.stats : {
-    totalVendas: 0,
-    formasPagamento: { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 },
-    maquinasOnline: 0,
-    maquinasTotal: 0,
-    totalEstornos: 0,
-    quantidadePremios: 0,
-  };
+  const totais: EstatisticasData = globalEntry && Object.keys(globalEntry.stats).length > 0 
+    ? globalEntry.stats 
+    : {
+        totalVendas: 0,
+        formasPagamento: { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 },
+        maquinasOnline: 0,
+        maquinasTotal: 0,
+        totalEstornos: 0,
+        quantidadePremios: 0,
+      };
 
-  if (!globalEntry) {
-    filtered.forEach(c => {
+  // Se não temos dados globais reais, somamos os individuais
+  if (!globalEntry || Object.keys(globalEntry.stats).length === 0) {
+    individualStats.forEach(c => {
       const d = c.stats;
       totais.totalVendas = (totais.totalVendas || 0) + toNum(d.totalVendas);
       totais.totalEstornos = (totais.totalEstornos || 0) + toNum(d.totalEstornos);
@@ -161,6 +174,7 @@ export default function Dashboard() {
       totais.maquinasTotal = (totais.maquinasTotal || 0) + toNum(d.maquinasTotal);
       totais.quantidadePremios = (totais.quantidadePremios || 0) + toNum(d.quantidadePremios);
       if (d.formasPagamento) {
+        if (!totais.formasPagamento) totais.formasPagamento = { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 };
         const fp = totais.formasPagamento as FormasPagamento;
         fp.pix += toNum(d.formasPagamento.pix);
         fp.especie += toNum(d.formasPagamento.especie);
@@ -171,7 +185,7 @@ export default function Dashboard() {
     });
   }
 
-  const fp = totais.formasPagamento as FormasPagamento || { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 };
+  const fp = (totais.formasPagamento as FormasPagamento) || { pix: 0, especie: 0, debito: 0, credito: 0, creditoRemoto: 0 };
 
   const periodos: { label: string; value: Periodo }[] = [
     { label: "Hoje", value: "hoje" },
