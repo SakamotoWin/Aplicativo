@@ -80,9 +80,14 @@ export default function Transacoes() {
           (c.Maquina || []).map(m => ({ ...m, estabelecimentoNome: c.nome }))
         ) : [];
       } else {
-        // O servidor usa /maquina no singular
-        const list = await apiFetch<MaquinaItem[]>("/maquina");
-        machines = Array.isArray(list) ? list : [];
+        // Tentar plural e depois singular
+        try {
+          const list = await apiFetch<MaquinaItem[]>("/maquinas");
+          machines = Array.isArray(list) ? list : [];
+        } catch (err) {
+          const list = await apiFetch<MaquinaItem[]>("/maquina");
+          machines = Array.isArray(list) ? list : [];
+        }
       }
 
       // Step 2: fetch transactions per machine

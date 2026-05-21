@@ -1,8 +1,8 @@
 // Tentando o servidor novo novamente, pois o Heroku deu Failed to Fetch.
 const API_BASE = "https://server.pixmachineapp.com.br";
 
-// ID Master do Administrador no Servidor
-const ADMIN_MASTER_ID = "dcfe1380-80d2-4652-aca0-e0accdf05f90";
+// ID Master do Administrador no Servidor (Opcional, agora usamos o ID do admin logado)
+const ADMIN_MASTER_ID = "";
 
 export type LoginTipo = "cliente" | "pessoa";
 
@@ -134,13 +134,8 @@ export function isAdmin(): boolean {
 }
 
 export function getUserId(): string | null {
-  const localId = localStorage.getItem("userId");
-  // Se for admin, priorizamos o ADMIN_MASTER_ID para estatísticas globais,
-  // mas se ele não existir, usamos o ID do usuário logado.
-  if (isAdmin()) {
-    return ADMIN_MASTER_ID || localId;
-  }
-  return localId;
+  // Retorna o ID do usuário logado (seja admin ou cliente)
+  return localStorage.getItem("userId");
 }
 
 export async function apiFetch<T = unknown>(

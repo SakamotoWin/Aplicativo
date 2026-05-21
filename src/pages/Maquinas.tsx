@@ -40,14 +40,21 @@ export default function Maquinas() {
   const loadMaquinas = async () => {
     try {
       if (isAdmin()) {
+        // Para Admin, buscamos todos os clientes e suas máquinas
         const clientes = await apiFetch<ClienteResponse[]>("/clientes");
         setMaquinas(clientes.flatMap((c) => 
           (c.Maquina || []).map(m => ({ ...m, estabelecimentoNome: c.nome }))
         ));
       } else {
-        // O servidor usa /maquina no singular conforme maquinaRoutes
-        const list = await apiFetch<Maquina[]>("/maquina");
-        setMaquinas(Array.isArray(list) ? list : []);
+        // Para Cliente, tentamos primeiro /maquinas (plural) e depois /maquina (singular) como fallback
+        try {
+          const list = await apiFetch<Maquina[]>("/maquinas");
+          setMaquinas(Array.isArray(list) ? list : []);
+        } catch (err) {
+          console.warn("[Maquinas] Falha ao buscar em /maquinas, tentando /maquina...");
+          const list = await apiFetch<Maquina[]>("/maquina");
+          setMaquinas(Array.isArray(list) ? list : []);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Erro ao carregar máquinas");

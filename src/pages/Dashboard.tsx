@@ -68,36 +68,23 @@ export default function Dashboard() {
 
       if (isAdmin()) {
         const clienteResults: ClienteEstatistica[] = [];
-        const loggedUserId = localStorage.getItem("userId");
         
-        // 1. Buscar estatísticas globais (Resumo Geral)
-        // Tentamos primeiro com o ADMIN_MASTER_ID (userId) e depois com o ID do próprio admin logado
-        const idsToTry = [userId, loggedUserId].filter((id, index, self) => id && self.indexOf(id) === index);
-        
-        let globalStatsLoaded = false;
-        for (const id of idsToTry) {
-          try {
-            const url = `/estatisticas-gerais/${id}${periodoQuery}`;
-            console.log(`[Dashboard] Tentando estatísticas globais com ID ${id}:`, url);
-            const globalStats = await apiFetch<EstatisticasData>(url);
-            
-            if (globalStats) {
-              console.log(`[Dashboard] Estatísticas globais recebidas para ID ${id}:`, globalStats);
-              clienteResults.push({
-                id: "global",
-                nome: "Resumo Geral",
-                stats: globalStats,
-              });
-              globalStatsLoaded = true;
-              break; // Sucesso, não precisa tentar o próximo ID
-            }
-          } catch (err) {
-            console.warn(`[Dashboard] Falha ao buscar estatísticas para ID ${id}:`, err);
+        // 1. Buscar estatísticas globais (Resumo Geral) usando o ID do Admin logado
+        try {
+          const url = `/estatisticas-gerais/${userId}${periodoQuery}`;
+          console.log(`[Dashboard] Buscando estatísticas globais com ID ${userId}:`, url);
+          const globalStats = await apiFetch<EstatisticasData>(url);
+          
+          if (globalStats) {
+            console.log(`[Dashboard] Estatísticas globais recebidas:`, globalStats);
+            clienteResults.push({
+              id: "global",
+              nome: "Resumo Geral",
+              stats: globalStats,
+            });
           }
-        }
-
-        if (!globalStatsLoaded) {
-          console.error("[Dashboard] Não foi possível carregar estatísticas globais com nenhum ID disponível.");
+        } catch (err) {
+          console.error("[Dashboard] Erro ao carregar estatísticas globais:", err);
         }
 
         // 2. Buscar lista de clientes para detalhes individuais
