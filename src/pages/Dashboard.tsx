@@ -65,45 +65,42 @@ export default function Dashboard() {
       const periodoQuery = currentPeriodo !== "todos" ? `?periodo=${currentPeriodo}` : "";
 
       if (isAdmin()) {
-        // Para Admin, buscamos a lista de clientes
-        let clientes: { id: string; nome: string }[] = [];
-        try {
-          clientes = await apiFetch<{ id: string; nome: string }[]>("/clientes");
-        } catch (err) {
-          console.warn("[Dashboard] Erro ao carregar lista de clientes:", err);
-        }
-        
         const clienteResults: ClienteEstatistica[] = [];
         
-        // Tentamos buscar as estatísticas globais usando o ID Master
+        // 1. Buscar estatísticas globais (Resumo Geral)
         try {
           const globalStats = await apiFetch<EstatisticasData>(`/estatisticas-gerais/${userId}${periodoQuery}`);
-          if (globalStats && (toNum(globalStats.totalVendas) > 0 || toNum(globalStats.maquinasTotal) > 0)) {
-            clienteResults.push({
-              id: "global",
-              nome: "Resumo Geral",
-              stats: globalStats,
-            });
-          }
+          clienteResults.push({
+            id: "global",
+            nome: "Resumo Geral",
+            stats: globalStats,
+          });
         } catch (err) {
           console.warn("[Dashboard] Erro ao carregar estatísticas globais:", err);
         }
 
-        if (Array.isArray(clientes) && clientes.length > 0) {
-          // Buscamos estatísticas individuais de cada cliente
-          const results = await Promise.allSettled(
-            clientes.map(c => apiFetch<EstatisticasData>(`/estatisticas-gerais/${c.id}${periodoQuery}`))
-          );
+        // 2. Buscar lista de clientes para detalhes individuais
+        let clientes: { id: string; nome: string }[] = [];
+        try {
+          clientes = await apiFetch<{ id: string; nome: string }[]>("/clientes");
+          
+          if (Array.isArray(clientes) && clientes.length > 0) {
+            const results = await Promise.allSettled(
+              clientes.map(c => apiFetch<EstatisticasData>(`/estatisticas-gerais/${c.id}${periodoQuery}`))
+            );
 
-          results.forEach((r, index) => {
-            if (r.status === "fulfilled" && r.value) {
-              clienteResults.push({
-                id: clientes[index].id,
-                nome: clientes[index].nome || `Estabelecimento ${index + 1}`,
-                stats: r.value,
-              });
-            }
-          });
+            results.forEach((r, index) => {
+              if (r.status === "fulfilled" && r.value) {
+                clienteResults.push({
+                  id: clientes[index].id,
+                  nome: clientes[index].nome || `Estabelecimento ${index + 1}`,
+                  stats: r.value,
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.warn("[Dashboard] Erro ao carregar lista de clientes:", err);
         }
 
         setClienteStats(clienteResults);
@@ -162,10 +159,10 @@ export default function Dashboard() {
     quantidadePremios: 0,
   };
 
-  if (globalEntry && toNum(globalEntry.stats.totalVendas) > 0) {
-    // Usar dados globais do servidor
+  if (globalEntry) {
+    // Usar dados globais do servidor (mesmo que totalVendas seja 0, pois pode haver máquinas online)
     Object.assign(totais, globalEntry.stats);
-  } else {
+  } else if (individualStats.length > 0) {
     // Calcular soma manual (fallback robusto)
     individualStats.forEach(c => {
       const d = c.stats;
@@ -251,6 +248,8 @@ export default function Dashboard() {
             <StatBox label="Espécie" value={fmt(fp.especie)} color="text-green-400" />
             <StatBox label="Débito" value={fmt(fp.debito)} color="text-yellow-400" />
             <StatBox label="Crédito" value={fmt(fp.credito)} color="text-purple-400" />
+            <StatBox label="Crédito Remoto" value={fmt(fp.creditoRemoto)} color="text-orange-400" />
+            <StatBox label="Prêmios" value={String(toNum(totais.quantidadePremios))} color="text-pink-400" />
           </div>
 
           <div className="pt-4 border-t border-primary/10 grid grid-cols-2 gap-4">
