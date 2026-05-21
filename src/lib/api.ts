@@ -8,13 +8,11 @@ export type LoginTipo = "cliente" | "pessoa";
 
 export function getToken(): string | null {
   const token = localStorage.getItem("token");
-  console.log("[TOKEN] Recuperado do localStorage:", token ? `${token.slice(0, 24)}...` : "NULO/VAZIO");
   return token;
 }
 
 export function setToken(token: string) {
   localStorage.setItem("token", token);
-  console.log("[TOKEN] Salvo no localStorage:", token ? `${token.slice(0, 24)}...` : "VAZIO");
 }
 
 export function clearToken() {
@@ -78,7 +76,6 @@ async function parseResponse(res: Response): Promise<unknown> {
 async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginPayload) {
   const url = `${API_BASE}${path}`;
   console.log("[AUTH] POST", url);
-  console.log("[AUTH] Body:", { email: payload.email, senha: "***" });
 
   const res = await fetch(url, {
     method: "POST",
@@ -90,9 +87,7 @@ async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginP
   });
 
   const data = (await parseResponse(res)) as LoginResponse;
-  console.log("[AUTH] Response status:", res.status);
-  console.log("[AUTH] Response body:", data);
-
+  
   if (!res.ok) {
     throw new Error(data?.error || data?.message || "Erro ao fazer login");
   }
@@ -101,22 +96,20 @@ async function doLogin(path: "/login-cliente" | "/login-pessoa", payload: LoginP
     throw new Error("Token JWT inválido ou ausente na resposta do login.");
   }
 
-  // Salvar informações importantes do retorno do novo servidor
+  // Salvar informações importantes
   if (data.id) {
     localStorage.setItem("userId", String(data.id));
   }
   
-  // O servidor retorna 'key' como 'ADMIN' ou 'CLIENT'. O app usa 'userType' para controle.
+  // O servidor retorna 'key' como 'ADMIN' ou 'CLIENT'.
   if (data.key) {
     localStorage.setItem("userType", String(data.key));
   } else if (path === "/login-pessoa") {
-    // Fallback para admin se a key não vier
     localStorage.setItem("userType", "ADMIN");
   } else {
     localStorage.setItem("userType", "CLIENT");
   }
 
-  // Também salvar o tipo original
   if (data.type) localStorage.setItem("auth_tipo_original", String(data.type));
 
   return data;
@@ -134,17 +127,18 @@ export function getUserType(): string | null {
   return localStorage.getItem("userType");
 }
 
+export function isAdmin(): boolean {
+  const type = getUserType();
+  const authTipo = getAuthTipo();
+  return type === "ADMIN" || authTipo === "pessoa";
+}
+
 export function getUserId(): string | null {
-  const storedId = localStorage.getItem("userId");
   // Se for admin, sempre priorizar o ADMIN_MASTER_ID para chamadas de estatísticas globais
   if (isAdmin()) {
     return ADMIN_MASTER_ID;
   }
-  return storedId;
-}
-
-export function isAdmin(): boolean {
-  return getUserType() === "ADMIN" || getAuthTipo() === "pessoa";
+  return localStorage.getItem("userId");
 }
 
 export async function apiFetch<T = unknown>(
@@ -153,11 +147,6 @@ export async function apiFetch<T = unknown>(
 ): Promise<T> {
   const token = getToken();
   const url = `${API_BASE}${path}`;
-
-  console.log("[API] URL:", url);
-  console.log("[API] Token:", token ? `${token.slice(0, 24)}...` : "MISSING");
-  console.log("[API] User Type:", getUserType());
-  console.log("[API] User ID:", getUserId());
 
   if (!token || token.trim().length === 0) {
     throw new Error("Token não encontrado. Faça login novamente.");
@@ -176,16 +165,8 @@ export async function apiFetch<T = unknown>(
   });
 
   let rawData = await parseResponse(res);
-  console.log("[API] Status:", res.status);
   
   if (!res.ok) {
-    console.error("[API] Erro completo:", {
-      status: res.status,
-      statusText: res.statusText,
-      responseBody: rawData,
-      url: url,
-    });
-
     const errorMessage =
       typeof rawData === "object" && rawData !== null
         ? ((rawData as { error?: string; message?: string }).error ||
@@ -193,16 +174,6 @@ export async function apiFetch<T = unknown>(
         : undefined;
 
     if (res.status === 401) {
-      console.error("[401 ERROR] Token inválido!", {
-        token: token ? `${token.slice(0, 24)}...` : "NULO",
-        url,
-        errorMessage,
-      });
-      
-      if (errorMessage?.toLowerCase().includes("token") || errorMessage?.toLowerCase().includes("expirado")) {
-        // Opcional: não limpar o token imediatamente para permitir retries ou debug
-        // clearToken(); 
-      }
       throw new Error(errorMessage || "Sessão expirada ou sem permissão. Por favor, faça login novamente.");
     }
 
